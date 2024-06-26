@@ -46,6 +46,18 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     valueCache: VModelType;
     /** 防抖计时器 id */
     debounceTimer: number | undefined;
+    /** 展开动画 */
+    expandAnimation: {
+        start: boolean;
+        index: number;
+        level: number;
+        nextState: boolean;
+        ready: boolean;
+        currentExpandState: boolean;
+        topNodes: TreeNode[];
+        middleNodes: TreeNode[];
+        bottomNodes: TreeNode[];
+    };
 }, {
     /** 使用此方法重置树数据，可避免大量数据被 vue 监听 */
     setData(data: AnyPropsArrayType): void;
@@ -136,6 +148,11 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
      */
     updateRenderNodes(isScroll?: boolean): void;
     handleTreeScroll(): void;
+    resetExpandAnimation(): void;
+    updateMiddleNodes(): void;
+    updateBeforeExpand(nodeToExpand: TreeNode): void;
+    updateAfterExpand(): void;
+    onExpandAnimationFinish(): void;
     initializeNonReactiveData(): void;
 }, {
     topSpaceStyles: object;
@@ -150,6 +167,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     loadingIconCls: string[];
     iframeCls: string[];
     treeNodeListeners: object;
+    noSiblingNodeMap: Record<string, true>;
 }, {
     value: string | number | TreeNodeKeyType[];
     data: AnyPropsArrayType;
@@ -185,5 +203,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     bufferNodeAmount: number;
     nodeClassName: any;
     usePadding: boolean;
+    showLine: any;
+    animation: boolean;
 }>;
 export default _default;

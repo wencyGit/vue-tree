@@ -1,53 +1,83 @@
 <template>
-  <div :class="wrapperCls">
-    <div :class="dropBeforeCls"></div>
+  <div :class="indentWrapperCls">
+    <template v-if="showLine">
+      <template v-for="(level, index) in data._level">
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          :style="{
+            alignSelf: 'stretch',
+            width: `${nodeIndent}px`,
+          }"
+        >
+          <polyline
+            fill="none"
+            :points="polylinePoints(index === data._level - 1)"
+            :stroke-width="strokeWidth"
+            :stroke="showLineParams.color"
+            :stroke-dasharray="strokeDasharray"
+          />
+        </svg>
+      </template>
+    </template>
     <div
-      ref="nodeBody"
-      :class="nodeBodyCls"
-      v-on="dropListeners"
+      :class="wrapperCls"
+      :style="{
+        paddingLeft: showLine ? 'none' : (usePadding ? `${data._level * nodeIndent}px` : null),
+        marginLeft: showLine ? 'none' : (usePadding ? null : `${data._level * nodeIndent}px`),
+      }"
     >
-      <!-- 展开按钮 -->
-      <div :class="squareCls">
-        <!-- 外层用于占位，icon 用于点击 -->
-        <i
-          v-show="!data.isLeaf && !data._loading"
-          :class="expandCls"
-          @click="handleExpand"
-        ></i>
-        <LoadingIcon
-          v-if="data._loading"
-          :class="loadingIconCls"
-        />
-      </div>
-
-      <!-- 复选框 -->
+      <div :class="dropBeforeCls"></div>
       <div
-        v-if="showCheckbox"
-        :class="squareCls"
+        ref="nodeBody"
+        :class="nodeBodyCls"
+        v-on="dropListeners"
       >
+        <!-- 展开按钮 -->
+        <div :class="squareCls">
+          <!-- 外层用于占位，icon 用于点击 -->
+          <i
+            v-show="!data.isLeaf && !data._loading"
+            :class="expandCls"
+            @click="handleExpand"
+          ></i>
+          <LoadingIcon
+            v-if="data._loading"
+            :class="loadingIconCls"
+          />
+        </div>
+
+        <!-- 复选框 -->
         <div
-          :class="checkboxCls"
-          @click="handleCheck"
-        ></div>
-      </div>
+          v-if="showCheckbox"
+          :class="squareCls"
+        >
+          <div
+            :class="checkboxCls"
+            @click="handleCheck"
+          ></div>
+        </div>
 
-      <!-- 标题 -->
-      <div
-        :class="titleCls"
-        @click="handleSelect"
-        @dblclick="handleDblclick"
-        @contextmenu="handleRightClick"
-        v-on="dragListeners"
-        :draggable="draggable && !disableAll && !data.disabled"
-      >
-        <component
-          v-if="renderFunction"
-          :is="renderComponent"
-        ></component>
-        <template v-else>{{ data[titleField] }}</template>
+        <!-- 标题 -->
+        <div
+          :class="titleCls"
+          @click="handleSelect"
+          @dblclick="handleDblclick"
+          @contextmenu="handleRightClick"
+          v-on="dragListeners"
+          :draggable="draggable && !disableAll && !data.disabled"
+        >
+          <slot :node="fullData">
+            <component
+              v-if="renderFunction"
+              :is="renderComponent"
+            ></component>
+            <template v-else>{{ data[titleField] }}</template>
+          </slot>
+        </div>
       </div>
+      <div :class="dropAfterCls"></div>
     </div>
-    <div :class="dropAfterCls"></div>
   </div>
 </template>
 
@@ -55,7 +85,7 @@
 import Vue, { VueConstructor, CreateElement, VNode } from 'vue'
 import { TreeNode } from '../store'
 import LoadingIcon from './LoadingIcon.vue'
-import { dragHoverPartEnum } from '../const'
+import { ShowLine, dragHoverPartEnum, showLineType } from '../const'
 import CTree from './Tree.vue'
 
 const prefixCls = 'ctree-tree-node'
@@ -100,6 +130,28 @@ export default (Vue as VueConstructor<Vue & {
 
     /** 是否可放置 */
     droppable: Boolean,
+
+    /**
+     * 使用 padding 代替 margin 来展示子节点缩进
+     * 此 Prop 是为了方便样式定制，在下个大版本将全部使用 padding
+     * @deprecated
+     */
+     usePadding: Boolean,
+
+    /** 子节点缩进 */
+    nodeIndent: {
+      type: Number,
+      default: 20,
+    },
+
+    showLine: {
+      type: [
+        Boolean,
+        Object,
+      ],
+    },
+
+    noSiblingNodeMap: Object,
   },
   data () {
     return {
@@ -115,6 +167,11 @@ export default (Vue as VueConstructor<Vue & {
   },
   computed: {
     //#region Classes
+    indentWrapperCls (): Array<string | object> {
+      return [
+        `${prefixCls}__indent-wrapper`,
+      ]
+    },
     wrapperCls (): Array<string | object> {
       return [
         `${prefixCls}__wrapper`,
@@ -231,8 +288,50 @@ export default (Vue as VueConstructor<Vue & {
       return result
     },
     //#endregion Drag events
+
+    // #region show line
+    showLineParams (): Required<ShowLine> {
+      const defaultParams: Required<ShowLine> = {
+        width: 1,
+        type: showLineType.solid,
+        color: '#D3D3D3',
+        polyline: false,
+      }
+      let params: Required<ShowLine> = defaultParams
+      if (typeof this.showLine === 'object') {
+        params = {
+          width: this.showLine.width != null ? this.showLine.width : defaultParams.width,
+          type: this.showLine.type || defaultParams.type,
+          color: this.showLine.color || defaultParams.color,
+          polyline: this.showLine.polyline != null ? this.showLine.polyline : defaultParams.polyline,
+        }
+      }
+      return params
+    },
+
+    strokeWidth (): number {
+      return this.showLineParams.width * 100 / this.nodeIndent
+    },
+
+    strokeDasharray (): string {
+      switch (this.showLineParams.type) {
+        case showLineType.dashed:
+          return '25'
+        default:
+          break
+      }
+      return 'none'
+    },
+    // #endregion show line
   },
   methods: {
+    polylinePoints (isDirectParentLine: boolean): string {
+      if (!this.showLineParams.polyline || !isDirectParentLine) return '50,0 50,100'
+      const parent = this.fullData && this.fullData._parent
+      if (parent && this.noSiblingNodeMap[parent[this.keyField]] && this.noSiblingNodeMap[this.data[this.keyField]]) return '50,0 50,50 100,50 50,50'
+      return '50,0 50,50 100,50 50,50 50,100'
+    },
+
     handleExpand (): void {
       if (this.data.isLeaf) return
       this.$emit('expand', this.fullData)

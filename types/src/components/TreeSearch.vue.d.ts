@@ -7,6 +7,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
             unloadCheckedNodes: TreeNode[];
             blockLength: number;
             blockAreaHeight: number;
+            /** 处理全选点击 */
             topSpaceHeight: number;
             bottomSpaceHeight: number;
             renderAmount: number;
@@ -17,6 +18,17 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
             isRootLoading: boolean;
             valueCache: string | number | TreeNodeKeyType[];
             debounceTimer: number | undefined;
+            expandAnimation: {
+                start: boolean;
+                index: number;
+                level: number;
+                nextState: boolean;
+                ready: boolean;
+                currentExpandState: boolean;
+                topNodes: TreeNode[];
+                middleNodes: TreeNode[];
+                bottomNodes: TreeNode[];
+            };
         } & {
             setData(data: {
                 [key: string]: any;
@@ -67,6 +79,11 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
             updateRenderAmount(): void;
             updateRenderNodes(isScroll?: boolean): void;
             handleTreeScroll(): void;
+            resetExpandAnimation(): void;
+            updateMiddleNodes(): void;
+            updateBeforeExpand(nodeToExpand: TreeNode): void;
+            updateAfterExpand(): void;
+            onExpandAnimationFinish(): void;
             initializeNonReactiveData(): void;
         } & {
             topSpaceStyles: object;
@@ -81,6 +98,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
             loadingIconCls: string[];
             iframeCls: string[];
             treeNodeListeners: object;
+            noSiblingNodeMap: Record<string, true>;
         } & {
             value: string | number | TreeNodeKeyType[];
             data: {
@@ -120,6 +138,8 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
             bufferNodeAmount: number;
             nodeClassName: any;
             usePadding: boolean;
+            showLine: any;
+            animation: boolean;
         } & Vue & {
             $refs: {
                 scrollArea: HTMLDivElement;

@@ -129,3 +129,17 @@ export enum dragHoverPartEnum {
 //#endregion Drag
 
 export type TreeNodeKeyType = string | number
+
+export enum showLineType {
+  // dotted = 'dotted',
+  dashed = 'dashed',
+  solid = 'solid',
+}
+
+export interface ShowLine {
+  /** 连接线宽度，svg stroke-width， 默认 1px */
+  width?: number
+  type?: showLineType
+  color?: string
+  polyline?: boolean
+}

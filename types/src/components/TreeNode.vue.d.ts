@@ -1,6 +1,6 @@
 import Vue, { VueConstructor, CreateElement, VNode } from 'vue';
 import { TreeNode } from '../store';
-import { dragHoverPartEnum } from '../const';
+import { ShowLine, dragHoverPartEnum } from '../const';
 declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     $refs: {
         nodeBody: HTMLDivElement;
@@ -13,6 +13,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     /** 节点后拖拽 dragover */
     dragoverAfter: boolean;
 }, {
+    polylinePoints(isDirectParentLine: boolean): string;
     handleExpand(): void;
     handleCheck(): void;
     handleSelect(): void;
@@ -32,6 +33,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     handleDragLeave(e: DragEvent): void;
     handleDrop(e: DragEvent): void;
 }, {
+    indentWrapperCls: (string | object)[];
     wrapperCls: (string | object)[];
     nodeBodyCls: (string | object)[];
     dropBeforeCls: (string | object)[];
@@ -47,6 +49,9 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     renderComponent: VueConstructor<Vue>;
     dragListeners: object;
     dropListeners: object;
+    showLineParams: Required<ShowLine>;
+    strokeWidth: number;
+    strokeDasharray: string;
 }, {
     data: TreeNode;
     titleField: string;
@@ -58,5 +63,9 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     disableAll: boolean;
     draggable: boolean;
     droppable: boolean;
+    usePadding: boolean;
+    nodeIndent: number;
+    showLine: any;
+    noSiblingNodeMap: any;
 }>;
 export default _default;

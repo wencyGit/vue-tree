@@ -10,22 +10,82 @@
       <div :class="blockAreaCls">
         <div :style="topSpaceStyles"></div>
         <CTreeNode
-          v-for="(node, index) in renderNodes"
+          v-for="node in (expandAnimation.ready ? expandAnimation.topNodes : renderNodes)"
           :key="node[keyField]"
           :data="node"
+          :noSiblingNodeMap="noSiblingNodeMap"
           v-bind="$props"
           v-on="treeNodeListeners"
           :class="typeof nodeClassName === 'function' ? nodeClassName(node) : nodeClassName"
           :style="{
             minHeight: `${nodeMinHeight}px`,
-            marginLeft: usePadding ? null : `${node._level * nodeIndent}px`,
-            paddingLeft: usePadding ? `${node._level * nodeIndent}px` : null,
           }"
           @check="handleNodeCheck"
           @select="handleNodeSelect"
           @expand="handleNodeExpand"
           @node-drop="handleNodeDrop"
-        />
+        >
+          <template v-slot="slotProps">
+            <slot name="node" v-bind="slotProps"></slot>
+          </template>
+        </CTreeNode>
+        <template v-if="expandAnimation.ready">
+          <transition
+            name="ctree-expand-animation"
+            @after-enter="onExpandAnimationFinish"
+            @after-leave="onExpandAnimationFinish"
+          >
+            <div
+              v-show="expandAnimation.currentExpandState"
+              :style="{
+                display: 'grid',
+              }"
+            >
+              <div :style="{ overflow: 'hidden' }">
+                <CTreeNode
+                  v-for="node in expandAnimation.middleNodes"
+                  :key="node[keyField]"
+                  :data="node"
+                  :noSiblingNodeMap="noSiblingNodeMap"
+                  v-bind="$props"
+                  v-on="treeNodeListeners"
+                  :class="typeof nodeClassName === 'function' ? nodeClassName(node) : nodeClassName"
+                  :style="{
+                    minHeight: `${nodeMinHeight}px`,
+                  }"
+                  @check="handleNodeCheck"
+                  @select="handleNodeSelect"
+                  @expand="handleNodeExpand"
+                  @node-drop="handleNodeDrop"
+                >
+                  <template v-slot="slotProps">
+                    <slot name="node" v-bind="slotProps"></slot>
+                  </template>
+                </CTreeNode>
+              </div>
+            </div>
+          </transition>
+          <CTreeNode
+            v-for="node in expandAnimation.bottomNodes"
+            :key="node[keyField]"
+            :data="node"
+            :noSiblingNodeMap="noSiblingNodeMap"
+            v-bind="$props"
+            v-on="treeNodeListeners"
+            :class="typeof nodeClassName === 'function' ? nodeClassName(node) : nodeClassName"
+            :style="{
+              minHeight: `${nodeMinHeight}px`,
+            }"
+            @check="handleNodeCheck"
+            @select="handleNodeSelect"
+            @expand="handleNodeExpand"
+            @node-drop="handleNodeDrop"
+          >
+            <template v-slot="slotProps">
+              <slot name="node" v-bind="slotProps"></slot>
+            </template>
+          </CTreeNode>
+        </template>
         <div :style="bottomSpaceStyles"></div>
       </div>
     </div>
@@ -334,6 +394,17 @@ export default (Vue as VueConstructor<Vue & {
       type: Boolean,
       default: false,
     },
+
+    showLine: {
+      type: [
+        Boolean,
+        Object,
+      ],
+    },
+
+    animation: {
+      type: Boolean,
+    },
   },
   data () {
     const valueCache = Array.isArray(this.value) ? this.value.concat() : this.value
@@ -376,6 +447,21 @@ export default (Vue as VueConstructor<Vue & {
 
       /** 防抖计时器 id */
       debounceTimer: (undefined as number | undefined),
+
+      /** 展开动画 */
+      expandAnimation: {
+        start: false,
+        index: -1,
+        level: -1,
+        nextState: false,
+
+        ready: false,
+        currentExpandState: false,
+
+        topNodes: [] as TreeNode[],
+        middleNodes: [] as TreeNode[],
+        bottomNodes: [] as TreeNode[],
+      },
     }
   },
   computed: {
@@ -452,6 +538,43 @@ export default (Vue as VueConstructor<Vue & {
         }
       }
       return result
+    },
+
+    noSiblingNodeMap (): Record<string, true> {
+      const parentsOfFirstNode: TreeNode[] = []
+      let nodeParent = this.renderNodes[0] && this.renderNodes[0]._parent
+
+      while (nodeParent) {
+        parentsOfFirstNode.push(nodeParent)
+        nodeParent = nodeParent._parent
+      }
+
+      const nodesToIterate = parentsOfFirstNode.concat(this.renderNodes)
+
+      const map: Record<string, true> = {}
+      const stack: TreeNode[] = []
+      nodesToIterate.forEach((renderNode) => {
+        const currentNodeLevel = renderNode._level
+        let length = stack.length
+        while (length) {
+          const stackNode = stack[length - 1]
+          const stackNodeLevel = stackNode._level
+          if (stackNodeLevel > currentNodeLevel) {
+            map[stackNode[this.keyField]] = true
+            stack.pop()
+          } else if (stackNodeLevel === currentNodeLevel) {
+            stack.pop()
+            break
+          } else break
+          length--
+        }
+        stack.push(renderNode)
+      })
+      stack.forEach((node) => {
+        map[node[this.keyField]] = true
+      })
+
+      return map
     },
   },
   methods: {
@@ -597,7 +720,7 @@ export default (Vue as VueConstructor<Vue & {
           }, null, this.keyField, !!this.load)
         })
         this.unloadCheckedNodes = unloadNodes
-        this.nonReactive.blockNodes.push(...unloadNodes)
+        this.nonReactive.blockNodes = this.nonReactive.blockNodes.concat(unloadNodes)
         this.updateBlockData()
         this.updateRender()
       }
@@ -674,6 +797,7 @@ export default (Vue as VueConstructor<Vue & {
       this.nonReactive.store.setSelected(node[this.keyField], !node.selected)
     },
     handleNodeExpand (node: TreeNode): void {
+      this.updateBeforeExpand(node)
       this.nonReactive.store.setExpand(node[this.keyField], !node.expand)
     },
     handleNodeDrop (data: TreeNode, e: DragEvent, hoverPart: dragHoverPartEnum): void {
@@ -814,6 +938,80 @@ export default (Vue as VueConstructor<Vue & {
       // this.updateRenderNodes(true)
     },
 
+    // #region expand animation
+    resetExpandAnimation (): void {
+      this.expandAnimation.start = false
+      this.expandAnimation.ready = false
+      this.expandAnimation.index = -1
+      this.expandAnimation.level = -1
+
+      this.expandAnimation.topNodes = []
+      this.expandAnimation.middleNodes = []
+      this.expandAnimation.bottomNodes = []
+    },
+
+    updateMiddleNodes (): void {
+      const nodeToExpandLevel = this.expandAnimation.level
+      const middleNodes: TreeNode[] = []
+      const renderNodesLength = this.renderNodes.length
+      for (let i = this.expandAnimation.index + 1; i < renderNodesLength; i++) {
+        if (this.renderNodes[i]._level > nodeToExpandLevel) {
+          middleNodes.push(this.renderNodes[i])
+        } else break
+      }
+      this.expandAnimation.middleNodes = middleNodes
+    },
+
+    updateBeforeExpand (nodeToExpand: TreeNode): void {
+      if (!this.animation) return
+      this.resetExpandAnimation()
+
+      const key = nodeToExpand[this.keyField]
+      const index = this.renderNodes.findIndex((renderNode) => renderNode[this.keyField] === key)
+      if (index > -1) {
+        this.expandAnimation.index = index
+        this.expandAnimation.level = nodeToExpand._level
+        this.expandAnimation.start = true
+        this.expandAnimation.currentExpandState = nodeToExpand.expand
+        this.expandAnimation.nextState = !nodeToExpand.expand
+
+        if (this.expandAnimation.nextState) {
+          this.expandAnimation.bottomNodes = this.renderNodes.slice(this.expandAnimation.index + 1)
+        } else {
+          this.updateMiddleNodes()
+        }
+      }
+    },
+
+    updateAfterExpand (): void {
+      if (!this.animation) return
+
+      if (!this.expandAnimation.start) {
+        this.expandAnimation.start = false
+        return
+      }
+
+      if (this.expandAnimation.index === -1) return
+
+      this.$nextTick(() => {
+        this.expandAnimation.topNodes = this.renderNodes.slice(0, this.expandAnimation.index + 1)
+        if (this.expandAnimation.nextState) {
+          this.updateMiddleNodes()
+        } else {
+          this.expandAnimation.bottomNodes = this.renderNodes.slice(this.expandAnimation.index + 1)
+        }
+        this.expandAnimation.ready = true
+        this.$nextTick(() => {
+          this.expandAnimation.currentExpandState = !this.expandAnimation.currentExpandState
+        })
+      })
+    },
+
+   onExpandAnimationFinish (): void {
+      this.resetExpandAnimation()
+    },
+    // #endregion expand animation
+
     initializeNonReactiveData (): void {
       const { keyField, ignoreMode, filteredNodeCheckable, cascade, defaultExpandAll, load, expandOnFilter } = this
       this.nonReactive = {
@@ -834,6 +1032,7 @@ export default (Vue as VueConstructor<Vue & {
     // Initial non-reactive
     this.initializeNonReactiveData()
 
+    this.nonReactive.store.on('expand', this.updateAfterExpand)
     this.nonReactive.store.on('visible-data-change', this.updateBlockNodes)
     this.nonReactive.store.on('render-data-change', this.updateRender)
     this.nonReactive.store.on('checked-change', (checkedNodes: TreeNode[], checkedKeys: TreeNodeKeyType[]) => {

@@ -67,4 +67,15 @@ export declare enum dragHoverPartEnum {
     after = "after"
 }
 export declare type TreeNodeKeyType = string | number;
+export declare enum showLineType {
+    dashed = "dashed",
+    solid = "solid"
+}
+export interface ShowLine {
+    /** 连接线宽度，svg stroke-width， 默认 1px */
+    width?: number;
+    type?: showLineType;
+    color?: string;
+    polyline?: boolean;
+}
 export {};
