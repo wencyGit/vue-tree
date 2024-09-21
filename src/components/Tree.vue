@@ -458,6 +458,7 @@ export default (Vue as VueConstructor<Vue & {
         ready: false,
         currentExpandState: false,
 
+        expandRenderStart: 0,
         topNodes: [] as TreeNode[],
         middleNodes: [] as TreeNode[],
         bottomNodes: [] as TreeNode[],
@@ -945,6 +946,7 @@ export default (Vue as VueConstructor<Vue & {
       this.expandAnimation.index = -1
       this.expandAnimation.level = -1
 
+      this.expandAnimation.expandRenderStart = 0
       this.expandAnimation.topNodes = []
       this.expandAnimation.middleNodes = []
       this.expandAnimation.bottomNodes = []
@@ -954,7 +956,8 @@ export default (Vue as VueConstructor<Vue & {
       const nodeToExpandLevel = this.expandAnimation.level
       const middleNodes: TreeNode[] = []
       const renderNodesLength = this.renderNodes.length
-      for (let i = this.expandAnimation.index + 1; i < renderNodesLength; i++) {
+      const expandRenderStartDiff = this.renderStart - this.expandAnimation.expandRenderStart
+      for (let i = this.expandAnimation.index - expandRenderStartDiff + 1; i < renderNodesLength; i++) {
         if (this.renderNodes[i]._level > nodeToExpandLevel) {
           middleNodes.push(this.renderNodes[i])
         } else break
@@ -974,6 +977,7 @@ export default (Vue as VueConstructor<Vue & {
         this.expandAnimation.start = true
         this.expandAnimation.currentExpandState = nodeToExpand.expand
         this.expandAnimation.nextState = !nodeToExpand.expand
+        this.expandAnimation.expandRenderStart = this.renderStart
 
         if (this.expandAnimation.nextState) {
           this.expandAnimation.bottomNodes = this.renderNodes.slice(this.expandAnimation.index + 1)
@@ -994,11 +998,12 @@ export default (Vue as VueConstructor<Vue & {
       if (this.expandAnimation.index === -1) return
 
       this.$nextTick(() => {
-        this.expandAnimation.topNodes = this.renderNodes.slice(0, this.expandAnimation.index + 1)
+        const expandRenderStartDiff = this.renderStart - this.expandAnimation.expandRenderStart
+        this.expandAnimation.topNodes = this.renderNodes.slice(0, this.expandAnimation.index - expandRenderStartDiff + 1)
         if (this.expandAnimation.nextState) {
           this.updateMiddleNodes()
         } else {
-          this.expandAnimation.bottomNodes = this.renderNodes.slice(this.expandAnimation.index + 1)
+          this.expandAnimation.bottomNodes = this.renderNodes.slice(this.expandAnimation.index - expandRenderStartDiff + 1)
         }
         this.expandAnimation.ready = true
         this.$nextTick(() => {

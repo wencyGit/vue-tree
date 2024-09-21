@@ -38,8 +38,8 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
             setExpand: (key: TreeNodeKeyType, value: boolean, expandParent?: boolean) => void;
             setExpandKeys: (keys: TreeNodeKeyType[], value: boolean) => void;
             setExpandAll: (value: boolean) => void;
-            getCheckedNodes: (ignoreMode?: "none" | "parents" | "children" | undefined) => TreeNode[];
-            getCheckedKeys: (ignoreMode?: "none" | "parents" | "children" | undefined) => TreeNodeKeyType[];
+            getCheckedNodes: (ignoreMode?: "children" | "none" | "parents" | undefined) => TreeNode[];
+            getCheckedKeys: (ignoreMode?: "children" | "none" | "parents" | undefined) => TreeNodeKeyType[];
             getIndeterminateNodes: () => TreeNode[];
             getSelectedNode: () => TreeNode | null;
             getSelectedKey: () => string | number | null;
@@ -106,6 +106,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
                         nextState: boolean;
                         ready: boolean;
                         currentExpandState: boolean;
+                        expandRenderStart: number;
                         topNodes: TreeNode[];
                         middleNodes: TreeNode[];
                         bottomNodes: TreeNode[];
@@ -123,8 +124,8 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
                     setExpand(key: TreeNodeKeyType, value: boolean, expandParent?: boolean): void;
                     setExpandKeys(keys: TreeNodeKeyType[], value: boolean): void;
                     setExpandAll(value: boolean): void;
-                    getCheckedNodes(ignoreMode?: "none" | "parents" | "children" | undefined): TreeNode[];
-                    getCheckedKeys(ignoreMode?: "none" | "parents" | "children" | undefined): TreeNodeKeyType[];
+                    getCheckedNodes(ignoreMode?: "children" | "none" | "parents" | undefined): TreeNode[];
+                    getCheckedKeys(ignoreMode?: "children" | "none" | "parents" | undefined): TreeNodeKeyType[];
                     getIndeterminateNodes(): TreeNode[];
                     getSelectedNode(): TreeNode | null;
                     getSelectedKey(): string | number | null;
@@ -205,7 +206,7 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
                     draggable: boolean;
                     droppable: boolean;
                     beforeDropMethod: (dragKey: TreeNodeKeyType, dropKey: TreeNodeKeyType, hoverPart: import("../const").dragHoverPartEnum) => boolean;
-                    ignoreMode: "none" | "parents" | "children";
+                    ignoreMode: "children" | "none" | "parents";
                     autoLoad: boolean;
                     load: (node: TreeNode | null, resolve: Function, reject: Function) => any;
                     render: (h: import("vue").CreateElement, node: TreeNode) => import("vue").VNode;
@@ -274,8 +275,8 @@ declare const _default: import("vue/types/vue").ExtendedVue<Vue & {
     setExpand: (key: TreeNodeKeyType, value: boolean, expandParent?: boolean) => void;
     setExpandKeys: (keys: TreeNodeKeyType[], value: boolean) => void;
     setExpandAll: (value: boolean) => void;
-    getCheckedNodes: (ignoreMode?: "none" | "parents" | "children" | undefined) => TreeNode[];
-    getCheckedKeys: (ignoreMode?: "none" | "parents" | "children" | undefined) => TreeNodeKeyType[];
+    getCheckedNodes: (ignoreMode?: "children" | "none" | "parents" | undefined) => TreeNode[];
+    getCheckedKeys: (ignoreMode?: "children" | "none" | "parents" | undefined) => TreeNodeKeyType[];
     getIndeterminateNodes: () => TreeNode[];
     getSelectedNode: () => TreeNode | null;
     getSelectedKey: () => string | number | null;
