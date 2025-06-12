@@ -2,9 +2,9 @@
   <VTree ref="tree" :data="data">
     <template #node="{ node }">
       <span>{{ node.title }}</span>
-      <button @click="handleAdd(node)">Add sibling</button>
-      <button @click="handleAppend(node)">Append child</button>
-      <button @click="handleRemove(node)">Remove</button>
+      <button @click="handleAdd(node, $event)">Add sibling</button>
+      <button @click="handleAppend(node, $event)">Append child</button>
+      <button @click="handleRemove(node, $event)">Remove</button>
     </template>
   </VTree>
 </template>
@@ -18,17 +18,20 @@ const tree = ref()
 let nodeAddCount = 0
 let nodeAppendCount = 0
 
-const handleAdd = (node) => {
+const handleAdd = (node, event) => {
+  event.stopPropagation()
   tree.value.insertAfter({ title: `node-added-${nodeAddCount}` }, node.id)
   nodeAddCount++
 }
 
-const handleAppend = (node) => {
+const handleAppend = (node, event) => {
+  event.stopPropagation()
   tree.value.append({ title: `node-appended-${nodeAppendCount}` }, node.id)
   nodeAppendCount++
 }
 
-const handleRemove = (node) => {
+const handleRemove = (node, event) => {
+  event.stopPropagation()
   tree.value.remove(node.id)
 }
 

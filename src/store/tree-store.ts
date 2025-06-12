@@ -1027,13 +1027,6 @@ export default class TreeStore extends TreeEventTarget {
     // 更新父节点 isLeaf, expand
     if (parentNode) {
       parentNode.isLeaf = false
-      this.setExpand(
-        parentNode[this.options.keyField],
-        true,
-        false,
-        false,
-        false
-      )
     } else if (typeof dataIndex === 'number' && dataIndex > -1) {
       // 没有父节点，则需要插入到 this.data 中以保证数据正确
       this.data.splice(dataIndex, 0, node)
